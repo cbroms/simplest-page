@@ -1,47 +1,17 @@
-import email
-from email import policy
-from email.parser import BytesParser
-import mimetypes
+
+from interface.helpers.assembler import assemble_file
 import ssl
 import certifi
-import tempfile
 import threading
 import os
 import constants
 from imapclient import IMAPClient
 
+from helpers import decoder, assembler, uploader
+
 ssl_context = ssl.create_default_context(cafile=certifi.where())
 ssl_context.check_hostname = True
 ssl_context.verify_mode = ssl.CERT_REQUIRED
-
-
-def decode_message(message):
-    richest = message.get_body()
-    partfiles = {}
-    body = ""
-
-    body = richest.get_body(preferencelist=('html'))
-    for part in richest.iter_attachments():
-        fn = part.get_filename()
-        if fn:
-            extension = os.path.splitext(part.get_filename())[1]
-        else:
-            extension = mimetypes.guess_extension(part.get_content_type())
-        with tempfile.NamedTemporaryFile(suffix=extension, delete=False) as f:
-            f.write(part.get_content())
-            # again strip the <> to go from email form of cid to html form.
-            partfiles[part['content-id'][1:-1]] = f.name
-
-    # with tempfile.NamedTemporaryFile(mode='w', delete=False) as f:
-    #     # The magic_html_parser has to rewrite the href="cid:...." attributes to
-    #     # point to the filenames in partfiles.  It also has to do a safety-sanitize
-    #     # of the html.  It could be written using html.parser.
-    #     f.write(magic_html_parser(body.get_content(), partfiles))
-    # webbrowser.open(f.name)
-    # os.remove(f.name)
-    print(partfiles)
-    # for fn in partfiles.values():
-    #     os.remove(fn)
 
 
 def fetch_and_decode_messages(messages):
@@ -65,12 +35,15 @@ def decode_test_message():
     server.select_folder("INBOX")
 
     for uid, message_data in server.fetch([17], "RFC822").items():
-        email_message = email.message_from_bytes(message_data[b"RFC822"])
-        print(uid, email_message.get("From"), email_message.get(
-            "Subject"))
-        msg = BytesParser(policy=policy.default).parsebytes(
-            message_data[b"RFC822"])
-        decode_message(msg)
+        # email_message = email.message_from_bytes(message_data[b"RFC822"])
+        # print(uid, email_message.get("From"), email_message.get(
+        #     "Subject"))
+        message = decoder.bytes_to_message(message_data)
+        content, files = decoder.decode_message(message)
+        new_html_file = assembler.assemble_file(content, files)
+        # new_filename = assembler.create_new_filename()
+        # response = uploader.upload_file(new_html_file, new_filename)
+        assembler.cleanup_tempfiles(new_html_file, files)
 
     server.logout()
 
