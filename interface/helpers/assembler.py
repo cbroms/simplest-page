@@ -1,12 +1,12 @@
 import tempfile
 import os
 from html.parser import HTMLParser
+from markdownify import markdownify
 
 
 def replace_cids(content, partfiles):
 
     class Parser(HTMLParser):
-
         new_html = ''
 
         def handle_starttag(self, tag, attrs):
@@ -33,18 +33,16 @@ def replace_cids(content, partfiles):
     return parser.new_html
 
 
-def assemble_file(content, partfiles):
-    with tempfile.NamedTemporaryFile(mode='w', delete=False) as f:
-        f.write(replace_cids(content, partfiles))
-
-    return f.name
+def html_to_markdown(html):
+    return markdownify(html)
 
 
-def create_new_filename():
-    return ''
+def assemble_content(content, partfiles):
+    new_html = replace_cids(content, partfiles)
+    # new_markdown = html_to_markdown(new_html)
+    return new_html
 
 
-def cleanup_temp_files(temp_html, partfiles):
-    os.remove(temp_html)
+def cleanup_tempfiles(partfiles):
     for fn in partfiles.values():
         os.remove(fn)
