@@ -2,14 +2,20 @@ import tempfile
 import os
 from html.parser import HTMLParser
 from markdownify import markdownify
+from pybars import Compiler
+
+compiler = Compiler()
 
 
 def replace_cids(content, partfiles):
 
     class Parser(HTMLParser):
         new_html = ''
+        description = ''
+        image = ''
 
         def handle_starttag(self, tag, attrs):
+
             new_attrs = ''
             for attr, value in attrs:
                 if attr == 'width' or attr == 'height':
@@ -19,6 +25,9 @@ def replace_cids(content, partfiles):
                     if cid in partfiles:
                         value = partfiles[cid]
 
+                    if self.image == '':
+                        self.image = value
+
                 new_attrs += "{}=\"{}\" ".format(attr, value)
             self.new_html += "<{} {}>".format(tag, new_attrs)
 
@@ -27,20 +36,35 @@ def replace_cids(content, partfiles):
 
         def handle_data(self, data):
             self.new_html += data
+            if len(self.description) < 240:
+                self.description += data + ' '
 
     parser = Parser()
     parser.feed(content)
-    return parser.new_html
+    return (parser.new_html, parser.image, parser.description)
 
 
 def html_to_markdown(html):
     return markdownify(html)
 
 
-def assemble_content(content, partfiles):
-    new_html = replace_cids(content, partfiles)
+def assemble_content(author, title, date, content, partfiles):
+    (new_html, image, description) = replace_cids(content, partfiles)
+    with open('templates/template.html', 'r') as file:
+        source = file.read()
+        template = compiler.compile(source)
+
+        output = template({
+            'body': new_html,
+            'image': image,
+            'description': description,
+            'author': author,
+            'title': title,
+            'date': date,
+        })
+
     # new_markdown = html_to_markdown(new_html)
-    return new_html
+    return output
 
 
 def cleanup_tempfiles(partfiles):

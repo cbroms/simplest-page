@@ -34,10 +34,11 @@ def decode_test_message():
     server.login(constants.IMAP_USERNAME, constants.IMAP_PASSWORD)
     server.select_folder("INBOX")
 
-    for uid, message_data in server.fetch([17], "RFC822").items():
+    for uid, message_data in server.fetch([21], "RFC822").items():
         email_message = email.message_from_bytes(message_data[b"RFC822"])
         user = email_message.get("From")
         receiver = email_message.get("To")
+        date = email_message.get("Date")
         subject = email_message.get("Subject")
 
         intentions = deducer.deduce_intention(user, receiver, subject)
@@ -46,7 +47,8 @@ def decode_test_message():
             # decode the message, assemble the files, upload them
             message = decoder.bytes_to_message(message_data)
             content, files = decoder.decode_message(message)
-            new_html = assembler.assemble_content(content, files)
+            new_html = assembler.assemble_content(
+                user, subject, date, content, files)
             modifier.create_post(subject, new_html, files)
             assembler.cleanup_tempfiles(files)
 
