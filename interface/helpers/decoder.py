@@ -15,7 +15,7 @@ def decode_message(message):
     richest = message.get_body()
     partfiles = {}
 
-    body = richest.get_body(preferencelist=('html'))
+    body = richest.get_body(preferencelist=('html', 'plain'))
     for part in richest.iter_attachments():
         fn = part.get_filename()
         if fn:

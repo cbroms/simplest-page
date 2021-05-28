@@ -1,5 +1,8 @@
 import tempfile
 import os
+import constants
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 from html.parser import HTMLParser
 from markdownify import markdownify
 from pybars import Compiler
@@ -67,6 +70,34 @@ def assemble_content(author, title, date, content, partfiles):
     return output
 
 
+def assemble_email(old_message, new_message, args=None):
+    if args != None:
+        template = compiler.compile(new_message)
+        new_message = template(args)
+
+    msg = MIMEMultipart('mixed')
+    body = MIMEMultipart('alternative')
+
+    msg["Subject"] = "Re: " + old_message.get("Subject")
+    msg['In-Reply-To'] = old_message.get("Message-ID")
+    msg['References'] = old_message.get("Message-ID")
+    msg['Thread-Topic'] = old_message.get("Thread-Topic")
+    msg['Thread-Index'] = old_message.get("Thread-Index")
+    msg['To'] = (old_message.get('Reply-To')
+                 or old_message.get('From'))
+    msg['From'] = constants.REPLY_ADDRESS
+    msg['Reply-To'] = constants.REPLY_TO_ADDRESS
+
+    body.attach(MIMEText(new_message, 'html'))
+    msg.attach(body)
+
+    return msg.as_string()
+
+
 def cleanup_tempfiles(partfiles):
-    for fn in partfiles.values():
-        os.remove(fn)
+    try:
+        for fn in partfiles.values():
+            os.remove(fn)
+    except:
+        # if this fails it's fine
+        pass

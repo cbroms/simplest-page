@@ -55,7 +55,7 @@ def create_post(title, content, files):
         content = content.replace(
             filename, constants.CDN_DOMAIN + new_filename)
 
-    response = client.put_object(Body=content, Bucket=constants.S3_BUCKET, Key="{}{}/index.html".format(
+    client.put_object(Body=content, Bucket=constants.S3_BUCKET, Key="{}{}/index.html".format(
         path, slug), ContentType='text/html', ACL='public-read')
 
-    return response
+    return constants.DEPLOY_DOMAIN + slug
