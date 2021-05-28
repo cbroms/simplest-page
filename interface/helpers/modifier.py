@@ -1,5 +1,5 @@
-import redis
 import boto3
+
 import json
 import uuid
 from datetime import datetime
@@ -7,11 +7,9 @@ from slugify import slugify
 
 from boto3 import session
 from botocore.client import Config
-from boto3.s3.transfer import S3Transfer
+from botocore.exceptions import ClientError
 
 import constants as constants
-
-r = redis.Redis(host=constants.REDIS_HOST, port=constants.REDIS_PORT)
 
 
 session = session.Session()
@@ -21,36 +19,43 @@ client = session.client('s3',
                         aws_access_key_id=constants.S3_KEY,
                         aws_secret_access_key=constants.S3_SECRET)
 
-transfer = S3Transfer(client)
-
 
 def upload_file(filename, new_filename):
-    transfer.upload_file(filename, constants.S3_BUCKET, new_filename)
-    response = client.put_object_acl(
-        ACL='public-read', Bucket=constants.S3_BUCKET, Key=new_filename)
+    response = client.upload_file(filename, constants.S3_BUCKET,
+                                  new_filename, ExtraArgs={'ACL': 'public-read'})
     return response
 
 
-def get_site(name):
-    res = r.get(name)
-    if res != None:
-        return json.loads(res)
-    return None
+def create_post(title, content, files):
 
-
-def create_site(name, user, title="", description=""):
-    r.set(name, json.dumps(
-        {'id': str(uuid.uuid4()),
-         'user': user,
-         'path': "{}{}/".format(constants.SITES_DIR, name),
-         'created': datetime.utcnow(),
-         'title': title,
-         'description': description}))
-
-
-def create_post(site, title, content, files):
+    path = constants.SITES_DIR + 'assorted/'
     slug = slugify(title)
+    slug_exists = False
+
+    try:
+        # if this doesn't result in a 404, it already exists
+        client.head_object(Bucket=constants.S3_BUCKET,
+                           Key="{}{}/index.html".format(path, slug))
+        slug_exists = True
+    except ClientError as e:
+        slug_exists = int(e.response['Error']['Code']) != 404
+
+    # the slug already exists, add a random uuid
+    if slug_exists:
+        slug = slug + '-' + str(uuid.uuid4())
+
+    # upload any attached files
     for filename in files.values():
-        new_filename = "{}{}/{}".format(site['path'], slug, str(uuid.uuid4()))
-        # content.
-    return
+        filetype = filename.split('.')[1]
+        new_filename = "{}{}/{}.{}".format(path,
+                                           slug, str(uuid.uuid4()), filetype)
+        upload_file(filename, new_filename)
+
+        # replace local references to files to the uploaded locations
+        content = content.replace(
+            filename, constants.CDN_DOMAIN + new_filename)
+
+    response = client.put_object(Body=content, Bucket=constants.S3_BUCKET, Key="{}{}/index.html".format(
+        path, slug), ContentType='text/html', ACL='public-read')
+
+    return response
