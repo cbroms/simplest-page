@@ -1,7 +1,7 @@
 const express = require("express");
 const proxy = require("express-http-proxy");
 const app = express();
-const port = 3004;
+const port = 5000;
 
 const dotenv = require("dotenv");
 

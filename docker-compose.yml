@@ -1,0 +1,14 @@
+version: "3"
+services:
+  api:
+    build:
+      context: .
+      dockerfile: ./api.Dockerfile
+    ports:
+      - "3004:5000"
+    working_dir: /api
+  interface:
+    build:
+      context: .
+      dockerfile: ./interface.Dockerfile
+    working_dir: /interface
