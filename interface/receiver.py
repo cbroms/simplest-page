@@ -89,9 +89,8 @@ while True:
                     # check if we got any new mail. if so, the response should look like
                     # [(uuid, b'EXISTS'), (num_recent, b'RECENT')]
                     if tag == b'EXISTS':
-                        # for some reason we have to increase the uid by one, I have absolutely no idea why
                         fetch_task = threading.Thread(
-                            target=fetch_and_decode_messages, args=([uid + 1],))
+                            target=fetch_and_decode_messages, args=([uid],))
                         fetch_task.start()
             except:
                 # this fails when a message is fetched and marked as "seen"
