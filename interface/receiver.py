@@ -2,6 +2,7 @@ import ssl
 import certifi
 import threading
 import email
+import time
 import constants
 from imapclient import IMAPClient
 
@@ -74,32 +75,43 @@ server.login(constants.IMAP_USERNAME, constants.IMAP_PASSWORD)
 server.select_folder("INBOX")
 
 # Start IDLE mode
-server.idle()
-print("Connection is now in IDLE mode, send yourself an email or quit with ^c")
-
 while True:
     try:
-        # Wait for up to 30 seconds for an IDLE response
-        responses = server.idle_check(timeout=30)
-        # print("Server sent:", responses if responses else "nothing")
+        print("starting IDLE mode")
+        server.idle()
+        start_time = time.time()
+        current_time = start_time
 
-        if responses:
+        # restart after 10 mins
+        while int(current_time - start_time) < 600:
             try:
-                for uid, tag in responses:
-                    # check if we got any new mail. if so, the response should look like
-                    # [(uuid, b'EXISTS'), (num_recent, b'RECENT')]
-                    if tag == b'EXISTS':
-                        fetch_task = threading.Thread(
-                            target=fetch_and_decode_messages, args=([uid],))
-                        fetch_task.start()
-            except:
-                # this fails when a message is fetched and marked as "seen"
-                pass
+                # Wait for up to 30 seconds for an IDLE response
+                responses = server.idle_check(timeout=30)
+                # print("Server sent:", responses if responses else "nothing")
+
+                if responses:
+                    try:
+                        for uid, tag in responses:
+                            # check if we got any new mail. if so, the response should look like
+                            # [(uuid, b'EXISTS'), (num_recent, b'RECENT')]
+                            if tag == b'EXISTS':
+                                fetch_task = threading.Thread(
+                                    target=fetch_and_decode_messages, args=([uid],))
+                                fetch_task.start()
+                    except:
+                        # this fails when a message is fetched and marked as "seen"
+                        pass
+
+                current_time = time.time()
+
+            except KeyboardInterrupt as e:
+                raise e
+
+        server.idle_done()
+        print("\nIDLE mode done")
 
     except KeyboardInterrupt:
         break
 
 
-server.idle_done()
-print("\nIDLE mode done")
 server.logout()
