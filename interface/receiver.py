@@ -34,7 +34,7 @@ def fetch_and_decode_messages(new_messages):
 
         print("{} received".format(uid))
 
-        if intentions[0][0] == 'post':
+        if intentions[0][0] == 'page':
             try:
                 # decode the message, assemble the files, upload them
                 message = decoder.bytes_to_message(message_data)
