@@ -7,4 +7,6 @@ RUN npm install
 
 COPY api/ .
 
+RUN npm run compile
+
 CMD [ "node", "api.js" ]

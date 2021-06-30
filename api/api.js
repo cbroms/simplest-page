@@ -1,11 +1,75 @@
 const express = require("express");
 const proxy = require("express-http-proxy");
+const redis = require("async-redis");
+const Handlebars = require("handlebars");
+global.Handlebars = Handlebars
 const app = express();
 const port = 5000;
 
 const dotenv = require("dotenv");
 
 dotenv.config();
+
+require("./templates/settings.precompiled.js");
+
+const redisClient = redis.createClient({ host: "redis" });
+
+app.get('/settings/session/:id', async (req, res) => {
+  try {
+    // check that the id provided is valid 
+    const blogInfo = JSON.parse(await redisClient.get(req.params.id))
+
+    if (blogInfo === undefined || blogInfo === null) {
+      // session no longer exists, 404 it
+      res.sendStatus(404)
+    } else {
+      // we expect info to look like:
+      /* 
+      {
+        subdomain: "theblogssubdomain",
+        name: "The Blog's Name",
+        description: "The description of the blog. This populates the meta description field."
+        templates: {
+          index: "the/path/to/the/index/template",
+          page: "the/path/to/the/page/template",
+        },
+        author: "The Author <theauthors@email.com>"
+      }
+      */
+      const settingsTemplate = Handlebars.templates.settings
+      const html = settingsTemplate(blogInfo);
+
+      res.send(html)
+    }
+
+  }
+  catch (e) {
+    console.log(e)
+    // in the event of an error, return a default 500 response 
+    res.sendStatus(500)
+  }
+})
+
+// app.post('/settings/session/:id/update', (req, res) => {
+//   try {
+//     // check that the id provided is valid 
+//     const retVal = redisClient.get(req.params.id)
+
+//     if (retVal === undefined || retVal === null) {
+//       // session no longer exists, 404 it
+//       res.sendStatus(404)
+//     }
+
+//     // do something with the new data
+//     // precompile the templates to check for errors and upload compiled versions 
+//     // handlebars.precompile()
+
+
+//   }
+//   catch (e) {
+//     res.sendStatus(500)
+//   }
+// })
 
 app.use(
   "/",

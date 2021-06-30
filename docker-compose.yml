@@ -7,8 +7,15 @@ services:
     ports:
       - "3004:5000"
     working_dir: /api
+    depends_on: 
+      - redis
   interface:
     build:
       context: .
       dockerfile: ./interface.Dockerfile
     working_dir: /interface
+    depends_on: 
+      - redis 
+  redis:
+    image: "redis:alpine"
+    restart: always
