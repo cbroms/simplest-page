@@ -1,5 +1,5 @@
 import boto3
-
+import redis 
 import json
 import uuid
 from datetime import datetime
@@ -19,14 +19,46 @@ client = session.client('s3',
                         aws_access_key_id=constants.S3_KEY,
                         aws_secret_access_key=constants.S3_SECRET)
 
+redis_client = redis.Redis(host='redis', port=6379, db=0)
 
-def upload_file(filename, new_filename):
+def upload_file(filename, new_filename, author):
     response = client.upload_file(filename, constants.S3_BUCKET,
-                                  new_filename, ExtraArgs={'ACL': 'public-read'})
+                                  new_filename, ExtraArgs={'ACL': 'public-read', 'Metadata': {'author': author}})
     return response
 
+def get_site_metadata(sitename, user):
+    name_slugged = slugify(sitename)
+    path = constants.SITES_DIR + name_slugged + '/info.json'
+    site_exists = False
+    metadata = None
 
-def create_post(title, content, files):
+    try:
+        # if this doesn't result in a 404, it already exists
+        metadata = client.head_object(Bucket=constants.S3_BUCKET,
+                           Key=path)
+        site_exists = True
+    except ClientError as e:
+        site_exists = int(e.response['Error']['Code']) != 404
+    
+    if site_exists: 
+        # check that the user has permission to edit it 
+        if metadata['author'] == user:
+            return metadata
+        else:
+            return None
+    else:
+        return {'subdomain': name_slugged}
+    
+
+def create_session_url(metadata):
+    session_id = str(uuid.uuid4())
+    redis_client.set(session_id, json.dumps(metadata))
+    # expire the key after two hours 
+    redis_client.expire(session_id, 7200)
+    return constants.DEPLOY_DOMAIN + 'settings/session/' + session_id
+
+
+def create_post(author, title, content, files):
 
     path = constants.SITES_DIR + 'assorted/'
     slug = slugify(title)
@@ -49,13 +81,13 @@ def create_post(title, content, files):
         filetype = filename.split('.')[1]
         new_filename = "{}{}/{}.{}".format(path,
                                            slug, str(uuid.uuid4()), filetype)
-        upload_file(filename, new_filename)
+        upload_file(filename, new_filename, author)
 
         # replace local references to files to the uploaded locations
         content = content.replace(
             filename, constants.CDN_DOMAIN + new_filename)
 
     client.put_object(Body=content, Bucket=constants.S3_BUCKET, Key="{}{}/index.html".format(
-        path, slug), ContentType='text/html', ACL='public-read')
+        path, slug), ContentType='text/html', ACL='public-read', Metadata={'author': author})
 
     return constants.DEPLOY_DOMAIN + slug

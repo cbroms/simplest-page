@@ -6,7 +6,7 @@ import time
 import constants
 from imapclient import IMAPClient
 
-from helpers import deducer, decoder, assembler, modifier
+from helpers import deducer, decoder, assembler, interfacer
 
 import messages
 import sender
@@ -20,6 +20,7 @@ def fetch_and_decode_messages(new_messages):
     server = IMAPClient(constants.IMAP_HOST, ssl_context=ssl_context)
     server.login(constants.IMAP_USERNAME, constants.IMAP_PASSWORD)
     server.select_folder("INBOX")
+
 
     for uid, message_data in server.fetch(new_messages, "RFC822").items():
         email_message = email.message_from_bytes(message_data[b"RFC822"])
@@ -42,7 +43,7 @@ def fetch_and_decode_messages(new_messages):
                 new_html = assembler.assemble_content(
                     user, subject, date, content, files)
             except Exception as e:
-                print(e)
+                # print(e)
                 # something went wrong parsing.
                 sender.send_message(assembler.assemble_email(
                     email_message, messages.format_error), reply_user)
@@ -50,14 +51,14 @@ def fetch_and_decode_messages(new_messages):
                 break
 
             try:
-                post_url = modifier.create_post(subject, new_html, files)
+                post_url = interfacer.create_post(user, subject, new_html, files)
                 sender.send_message(assembler.assemble_email(email_message,
                                                              messages.posted, {'url': post_url}), reply_user)
                 print("{} posted: {}".format(uid, post_url))
             except:
                 # something went wrong posting
                 sender.send_message(assembler.assemble_email(
-                    email_message, messages.posting_error), reply_user)
+                    email_message, messages.system_error), reply_user)
                 print("{} post fail".format(uid))
                 break
 
@@ -66,6 +67,24 @@ def fetch_and_decode_messages(new_messages):
             except:
                 # fine if this fails
                 pass
+        elif intentions[0][0] == 'manage':
+            try: 
+                # if this returns None, the user doesn't have permission to edit 
+                metadata = interfacer.get_site_metadata(subject, user)
+                if metadata != None: 
+                    # create a new settings session 
+                    url = interfacer.create_session_url(metadata)
+                    sender.send_message(assembler.assemble_email(email_message, messages.session_created, {'url': url}), reply_user)
+                    print("{} settings session created".format(uid))
+
+                else:
+                    sender.send_message(assembler.assemble_email(email_message, messages.permission_error, {'sitename': subject}), reply_user)
+                    print("{} settings permission denied".format(uid))
+            except Exception as e:
+                # print(e)
+                sender.send_message(assembler.assemble_email(
+                    email_message, messages.system_error), reply_user)
+                print("{} settings fail".format(uid))
 
     server.logout()
 
