@@ -4,7 +4,7 @@
 <head>
     <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
     <meta charset="utf-8" />
-    <title>blog settings - simplest.page</title>
+    <title>setttings - simplest.page</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <style type="text/css">
         html {
@@ -39,34 +39,124 @@
             margin-bottom: 190px;
         }
 
-        li {
-            margin: 10px 0;
-        }
 
         img {
             width: 100%;
             border: 1px solid;
         }
 
-        #content {
-            padding-bottom: 60px;
-        }
+
 
         #content>div {
             padding: 10px 0;
         }
 
-        .date {
-            margin-bottom: 40px;
+        summary {
+            text-decoration: underline;
+            cursor: pointer;
+        }
+
+        #submit {
+            margin-top: 32px;
+            display: block;
+        }
+
+        section {
+            margin-bottom: 60px;
+        }
+
+        label {
+            display: block;
+            margin-top: 40px;
         }
     </style>
 </head>
 
 <body>
-    <h1>your blog settings</h1>
-    <div id="content">
-        <div>Hi</div>
-    </div>
+    <article>
+        <h1>settings &mdash; {{subdomain}}.simplest.page</h1>
+        <div id="content">
+            <section>
+                <h2>Templates</h2>
+                <p>simplest.page accepts two <a href="https://mustache.github.io/mustache.5.html">mustache templates</a>
+                    that are re-rendered each time you create a new post.
+                    Mustache
+                    templates are composed of a series of tags, defined with double curly brackets like
+                    <code>&#123;&#123;this&#125;&#125;</code>,
+                    and static content. When you create a post, the system replaces these tags with corresponding data
+                    from
+                    the post,
+                    creating the webpage.
+                </p>
+                <p>
+                <details>
+                    <summary>A minimal page template example.</summary>
+                    <pre>
+&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+  &lt;head&gt;
+    &lt;meta http-equiv=&quot;content-type&quot; content=&quot;text/html; charset=UTF-8&quot; /&gt;
+    &lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1&quot; /&gt;
+    &lt;meta charset=&quot;utf-8&quot; /&gt;
+    &lt;title&gt;&#123;&#123;title&#125;&#125;&lt;/title&gt;
+    &lt;meta name=&quot;description&quot; content=&quot;&#123;&#123;description&#125;&#125;&quot; /&gt;
+  &lt;/head&gt;
+  &lt;body&gt;
+    &lt;article&gt;
+      &lt;h1&gt;&#123;&#123;title&#125;&#125;&lt;/h1&gt;
+      &lt;div&gt;&#123;&#123;&#123;body&#125;&#125;&#125;&lt;/div&gt;
+    &lt;/article&gt;
+  &lt;/body&gt;
+&lt;/html&gt;
+            </pre>
+                </details>
+                </p>
+                <p>Templates give you full control over how your site is structured and what it looks like. The two
+                    templates are the only files you can upload, so ensure you include any styles or JavaScript inline,
+                    or
+                    link to them in your template's <code>head</code> section.</p>
+                <form enctype="multipart/form-data" method="post">
+                    <label for="index_file">
+                        <h4>Index page template</h4>
+                        <p>This is what will be shown when visiting the index page at
+                            <code>{{subdomain}}.simplest.page</code>.
+                        </p>
+                    </label>
+                    <input type="file" name="page_file" accept=".html,.handlebars">
+                    <label for="page_file">
+                        <h4>Post page template</h4>
+                        <p>This page will be rendered for each post you create and will be shown when visiting each post
+                            page,
+                            such as
+                            <code>{{subdomain}}.simplest.page/your-post</code>.
+                        </p>
+                    </label>
+                    <input type="file" name="page_file" accept=".html,.handlebars">
+                    <input type="submit" value="Upload templates" id="submit">
+                </form>
+            </section>
+
+            <section>
+                <h2>Site & posting information</h2>
+                <h4>Site attributes</h4>
+                <p>Your site can be found at <a
+                        href="https://{{subdomain}}.simplest.page"><code>{{subdomain}}.simplest.page</code></a>.</p>
+                <p>Your name and email address are <code>{{author}}</code>.
+                <h4>Posting</h4>
+                <p> You can create pages on this blog by emailing your posts to
+                    <a href="mailto:{{subdomain}}@simplest.page?subject=Your page's title&body=Your page's content.">
+                        <code>{{subdomain}}@simplest.page</code></a>
+                </p>
+                <h4>Editing site templates</h4>
+                To reaccess this page, email <a href="mailto:manage@simplest.page?subject={{subdomain}}">
+                    <code>manage@simplest.page</code></a> with <code>{{subdomain}}</code> in the subject, and visit the
+                temporary
+                link in the email that is sent in reply.
+            </section>
+
+        </div>
+    </article>
+
 </body>
 
 </html>

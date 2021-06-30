@@ -27,8 +27,6 @@ app.get('/settings/session/:id', async (req, res) => {
       /* 
       {
         subdomain: "theblogssubdomain",
-        name: "The Blog's Name",
-        description: "The description of the blog. This populates the meta description field."
         templates: {
           index: "the/path/to/the/index/template",
           page: "the/path/to/the/page/template",

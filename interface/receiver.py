@@ -72,6 +72,9 @@ def fetch_and_decode_messages(new_messages):
                 # if this returns None, the user doesn't have permission to edit 
                 metadata = interfacer.get_site_metadata(subject, user)
                 if metadata != None: 
+                    # if the site doesn't already exist, create it 
+                    if metadata['new']:
+                        interfacer.create_site(metadata)
                     # create a new settings session 
                     url = interfacer.create_session_url(metadata)
                     sender.send_message(assembler.assemble_email(email_message, messages.session_created, {'url': url}), reply_user)

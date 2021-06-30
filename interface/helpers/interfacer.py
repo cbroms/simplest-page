@@ -47,8 +47,14 @@ def get_site_metadata(sitename, user):
         else:
             return None
     else:
-        return {'subdomain': name_slugged}
+        return {'subdomain': name_slugged, 'author': user, 'new': True}
     
+def create_site(metadata):
+    del metadata['new']
+    # upload the info file with metadata to indicate that the site exists
+    path = constants.SITES_DIR + metadata['subdomain'] + '/info.json'
+    client.put_object(Body="", Bucket=constants.S3_BUCKET, Key=path, ContentType='text/json', Metadata=metadata)
+
 
 def create_session_url(metadata):
     session_id = str(uuid.uuid4())
