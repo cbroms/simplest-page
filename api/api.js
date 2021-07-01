@@ -71,7 +71,7 @@ app.get('/settings/session/:id', async (req, res) => {
 
 app.use(
   "/",
-  proxy("https://cdn.simplest.page", {
+  proxy(process.env.CDN_DOMAIN, {
     proxyReqPathResolver: (req) => {
       return new Promise(function (resolve, reject) {
         setTimeout(() => {
