@@ -15,6 +15,39 @@ ssl_context = ssl.create_default_context(cafile=certifi.where())
 ssl_context.check_hostname = True
 ssl_context.verify_mode = ssl.CERT_REQUIRED
 
+def form_and_create_post(email_message, message_data, user, subject, date, reply_user, sitename):
+    try:
+        # decode the message, assemble the files
+        message = decoder.bytes_to_message(message_data)
+        content, files = decoder.decode_message(message)
+        new_html = assembler.assemble_content(
+            user, subject, date, content, files)
+    except Exception as e:
+        # print(e)
+        # something went wrong parsing.
+        sender.send_message(assembler.assemble_email(
+            email_message, messages.format_error), reply_user)
+        print("{} parse fail".format(uid))
+        return
+
+    try:
+        post_url = interfacer.create_post(sitename, user, subject, new_html, files)
+        sender.send_message(assembler.assemble_email(email_message,
+                                                        messages.posted, {'url': post_url}), reply_user)
+        print("{} posted: {}".format(uid, post_url))
+    except:
+        # something went wrong posting
+        sender.send_message(assembler.assemble_email(
+            email_message, messages.system_error), reply_user)
+        print("{} post fail".format(uid))
+        return
+
+    try:
+        assembler.cleanup_tempfiles(files)
+    except:
+        # fine if this fails
+        pass
+
 
 def fetch_and_decode_messages(new_messages):
     server = IMAPClient(constants.IMAP_HOST, ssl_context=ssl_context)
@@ -36,37 +69,8 @@ def fetch_and_decode_messages(new_messages):
         print("{} received".format(uid))
 
         if intentions[0][0] == 'page':
-            try:
-                # decode the message, assemble the files, upload them
-                message = decoder.bytes_to_message(message_data)
-                content, files = decoder.decode_message(message)
-                new_html = assembler.assemble_content(
-                    user, subject, date, content, files)
-            except Exception as e:
-                # print(e)
-                # something went wrong parsing.
-                sender.send_message(assembler.assemble_email(
-                    email_message, messages.format_error), reply_user)
-                print("{} parse fail".format(uid))
-                break
+            form_and_create_post(email_message, message_data, user, subject, date, reply_user, 'assorted')
 
-            try:
-                post_url = interfacer.create_post(user, subject, new_html, files)
-                sender.send_message(assembler.assemble_email(email_message,
-                                                             messages.posted, {'url': post_url}), reply_user)
-                print("{} posted: {}".format(uid, post_url))
-            except:
-                # something went wrong posting
-                sender.send_message(assembler.assemble_email(
-                    email_message, messages.system_error), reply_user)
-                print("{} post fail".format(uid))
-                break
-
-            try:
-                assembler.cleanup_tempfiles(files)
-            except:
-                # fine if this fails
-                pass
         elif intentions[0][0] == 'manage':
             try: 
                 # if this returns None, the user doesn't have permission to edit 
@@ -88,6 +92,13 @@ def fetch_and_decode_messages(new_messages):
                 sender.send_message(assembler.assemble_email(
                     email_message, messages.system_error), reply_user)
                 print("{} settings fail".format(uid))
+        else:
+            intention = intentions[0][0]
+            metadata = interfacer.get_site_metadata(intention, user)
+            if metadata != None and 'new' not in metadata:
+                # the user is posting to their site and they have permission 
+                form_and_create_post(email_message, message_data, user, subject, date, reply_user, intention)
+            
 
     server.logout()
 

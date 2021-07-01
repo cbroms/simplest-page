@@ -78,13 +78,19 @@ app.use(
           // simulate async
           let resolvedPathValue = "";
           const hasEnd = req.url.includes(".");
+          // add .html to the end of the request if necessary 
           const cleanUrl =
             req.url[req.url.length - 1] === "/"
               ? req.url.substr(0, req.url.length - 1)
               : req.url;
           if (!hasEnd) resolvedPathValue = cleanUrl + "/index.html";
 
-          resolvedPathValue = process.env.URL_REWRITE + resolvedPathValue;
+          // handle subdomains 
+          sitename = 'assorted'
+          const parts = req.get('host').split(".")
+          if (parts.length > 2) sitename = parts[0]
+
+          resolvedPathValue = process.env.URL_REWRITE + sitename + resolvedPathValue;
           console.log(resolvedPathValue);
           resolve(resolvedPathValue);
         }, 200);

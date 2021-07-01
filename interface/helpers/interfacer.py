@@ -30,11 +30,11 @@ def get_site_metadata(sitename, user):
     name_slugged = slugify(sitename)
     path = constants.SITES_DIR + name_slugged + '/info.json'
     site_exists = False
-    metadata = None
+    head = None
 
     try:
         # if this doesn't result in a 404, it already exists
-        metadata = client.head_object(Bucket=constants.S3_BUCKET,
+        head = client.head_object(Bucket=constants.S3_BUCKET,
                            Key=path)
         site_exists = True
     except ClientError as e:
@@ -42,8 +42,8 @@ def get_site_metadata(sitename, user):
     
     if site_exists: 
         # check that the user has permission to edit it 
-        if metadata['author'] == user:
-            return metadata
+        if head.get('Metadata')['author'] == user:
+            return head.get('Metadata')
         else:
             return None
     else:
@@ -64,9 +64,9 @@ def create_session_url(metadata):
     return constants.DEPLOY_DOMAIN + 'settings/session/' + session_id
 
 
-def create_post(author, title, content, files):
+def create_post(sitename, author, title, content, files):
 
-    path = constants.SITES_DIR + 'assorted/'
+    path = constants.SITES_DIR + sitename + '/'
     slug = slugify(title)
     slug_exists = False
 
@@ -96,4 +96,7 @@ def create_post(author, title, content, files):
     client.put_object(Body=content, Bucket=constants.S3_BUCKET, Key="{}{}/index.html".format(
         path, slug), ContentType='text/html', ACL='public-read', Metadata={'author': author})
 
-    return constants.DEPLOY_DOMAIN + slug
+    if sitename == 'assorted':
+        return constants.DEPLOY_DOMAIN + slug
+    else: 
+        return constants.DEPLOY_DOMAIN.replace("https://", "https://{}.".format(sitename)) + slug
