@@ -15,15 +15,29 @@ ssl_context = ssl.create_default_context(cafile=certifi.where())
 ssl_context.check_hostname = True
 ssl_context.verify_mode = ssl.CERT_REQUIRED
 
-def form_and_create_post(email_message, message_data, user, subject, date, reply_user, sitename):
+def form_and_create_post(email_message, message_data, user, subject, reply_user, sitename):
+
+    headers_to_delete = ['delivered-to', 'received', 'dkim-signature', 'message-id' ]
     try:
+        attrs = {
+            'author': user,
+            'title': subject,
+            **email_message
+        }
+        # transform all headers to lowercase
+        attrs = { k.lower(): v for k, v in attrs.items()}
+        for header in headers_to_delete:
+            if header in attrs:
+                del attrs[header]   
+
         # decode the message, assemble the files
         message = decoder.bytes_to_message(message_data)
         content, files = decoder.decode_message(message)
+        [index_template, page_template] = interfacer.get_site_templates(sitename)
         new_html = assembler.assemble_content(
-            user, subject, date, content, files)
+            attrs, content, files, index_template, page_template)
     except Exception as e:
-        # print(e)
+        print(e)
         # something went wrong parsing.
         sender.send_message(assembler.assemble_email(
             email_message, messages.format_error), reply_user)
@@ -69,7 +83,7 @@ def fetch_and_decode_messages(new_messages):
         print("{} received".format(uid))
 
         if intentions[0][0] == 'page':
-            form_and_create_post(email_message, message_data, user, subject, date, reply_user, 'assorted')
+            form_and_create_post(email_message, message_data, user, subject, reply_user, 'assorted')
 
         elif intentions[0][0] == 'manage':
             try: 
@@ -97,7 +111,7 @@ def fetch_and_decode_messages(new_messages):
             metadata = interfacer.get_site_metadata(intention, user)
             if metadata != None and 'new' not in metadata:
                 # the user is posting to their site and they have permission 
-                form_and_create_post(email_message, message_data, user, subject, date, reply_user, intention)
+                form_and_create_post(email_message, message_data, user, subject, reply_user, intention)
             
 
     server.logout()

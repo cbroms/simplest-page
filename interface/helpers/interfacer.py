@@ -11,6 +11,7 @@ from botocore.exceptions import ClientError
 
 import constants as constants
 
+from assembler import open_and_compile_local_template
 
 session = session.Session()
 client = session.client('s3',
@@ -25,6 +26,26 @@ def upload_file(filename, new_filename, author):
     response = client.upload_file(filename, constants.S3_BUCKET,
                                   new_filename, ExtraArgs={'ACL': 'public-read', 'Metadata': {'author': author}})
     return response
+
+def get_file_as_string(filename): 
+    obj = client.get_object(Bucket=constants.S3_BUCKET, Key=filename)
+    return json.loads(obj['Body'].read().decode('utf-8'))
+
+def get_site_templates(sitename):
+    path = constants.SITES_DIR + sitename
+    try: 
+        # try to get the compiled index template the user uploaded
+        index_template = get_file_as_string(path + "/index.compiled.js")
+    except Exception as e:
+        # the index template doesn't exist for this site; use the default
+        index_template = open_and_compile_local_template('index')
+
+    try:
+        page_template = get_file_as_string(path + "/page.compiled.js")
+    except Exception as e:
+        page_template = open_and_compile_local_template('page')
+
+    return [index_template, page_template]
 
 def get_site_metadata(sitename, user):
     name_slugged = slugify(sitename)

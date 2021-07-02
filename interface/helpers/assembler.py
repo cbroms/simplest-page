@@ -50,21 +50,25 @@ def replace_cids(content, partfiles):
 def html_to_markdown(html):
     return markdownify(html)
 
-
-def assemble_content(author, title, date, content, partfiles):
-    (new_html, image, description) = replace_cids(content, partfiles)
-    with open('templates/template.html', 'r') as file:
+def open_and_compile_local_template(type):
+    # type can be any of the template types (rn just 'index' or 'page')
+    with open("templates/{}.mustache".format(type), 'r') as file:
         source = file.read()
+        # TODO precompile this for efficiency 
         template = compiler.compile(source)
+        return template
 
-        output = template({
-            'body': new_html,
-            'image': image,
-            'description': description,
-            'author': author,
-            'title': title,
-            'date': date,
-        })
+def assemble_content(attrs, content, partfiles, index_template, page_template):
+    (new_html, image, description) = replace_cids(content, partfiles)
+
+    output = page_template({
+        'body': new_html,
+        'image': image,
+        'description': description,
+        **attrs
+    })
+
+    # TODO handle the index template as well
 
     # new_markdown = html_to_markdown(new_html)
     return output
