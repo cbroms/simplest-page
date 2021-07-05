@@ -4,7 +4,7 @@
   "description": "",
   "main": "api.js",
   "scripts": {
-    "compile": "handlebars templates/settings.handlebars -f templates/settings.precompiled.js",
+    "compile": "handlebars templates/settings.handlebars -f templates/settings.precompiled.js && handlebars templates/error.handlebars -f templates/error.precompiled.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
