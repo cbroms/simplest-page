@@ -11,7 +11,7 @@ from botocore.exceptions import ClientError
 
 import constants as constants
 
-from assembler import open_and_compile_local_template
+from .assembler import open_and_compile_local_template
 
 session = session.Session()
 client = session.client('s3',
