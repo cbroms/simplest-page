@@ -44,7 +44,10 @@ def replace_cids(content, partfiles):
 
     parser = Parser()
     parser.feed(content)
-    return (parser.new_html, parser.image, parser.description)
+
+    description = parser.description.replace('\n', '').replace('\r', '')
+
+    return (parser.new_html, parser.image, description)
 
 
 def html_to_markdown(html):
@@ -52,27 +55,32 @@ def html_to_markdown(html):
 
 def open_and_compile_local_template(type):
     # type can be any of the template types (rn just 'index' or 'page')
-    with open("templates/{}.mustache".format(type), 'r') as file:
+    with open("templates/{}.handlebars".format(type), 'r') as file:
         source = file.read()
         # TODO precompile this for efficiency 
         template = compiler.compile(source)
         return template
 
-def assemble_content(attrs, content, partfiles, index_template, page_template):
+def assemble_content(attrs, content, partfiles, page_template):
     (new_html, image, description) = replace_cids(content, partfiles)
 
-    output = page_template({
+    page_output = page_template({
         'body': new_html,
         'image': image,
         'description': description,
         **attrs
     })
 
-    # TODO handle the index template as well
-
     # new_markdown = html_to_markdown(new_html)
-    return output
+    return [page_output, {'image': image, 'description': description}]
 
+
+def assemble_index(previous_content, index_template):
+    index_output = index_template({
+        'posts': previous_content,
+    })
+
+    return index_output
 
 def assemble_email(old_message, new_message, args=None):
     if args != None:

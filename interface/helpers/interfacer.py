@@ -70,11 +70,19 @@ def get_site_metadata(sitename, user):
     else:
         return {'subdomain': name_slugged, 'author': user, 'new': True}
     
+def get_prev_posts_info(slugged_sitename): 
+    # get the info from the previous posts 
+    # the info.json file contains a list of all the previous posts' metadata 
+    path = constants.SITES_DIR + slugged_sitename + '/info.json'
+    meta = client.head_object(Bucket=constants.S3_BUCKET, Key=path).get('Metadata')
+    info = get_file_as_string(path)
+    return [info, meta]
+
 def create_site(metadata):
     del metadata['new']
     # upload the info file with metadata to indicate that the site exists
     path = constants.SITES_DIR + metadata['subdomain'] + '/info.json'
-    client.put_object(Body="", Bucket=constants.S3_BUCKET, Key=path, ContentType='text/json', Metadata=metadata)
+    client.put_object(Body=json.dumps({'prev': []}), Bucket=constants.S3_BUCKET, Key=path, ContentType='text/json', Metadata=metadata)
 
 
 def create_session_url(metadata):
@@ -85,11 +93,12 @@ def create_session_url(metadata):
     return constants.DEPLOY_DOMAIN + 'settings/session/' + session_id
 
 
-def create_post(sitename, author, title, content, files):
+def create_post(slugged_sitename, author, title, content, attrs, files):
 
-    path = constants.SITES_DIR + sitename + '/'
+    path = constants.SITES_DIR + slugged_sitename + '/'
     slug = slugify(title)
     slug_exists = False
+
 
     try:
         # if this doesn't result in a 404, it already exists
@@ -114,10 +123,33 @@ def create_post(sitename, author, title, content, files):
         content = content.replace(
             filename, constants.CDN_DOMAIN + new_filename)
 
-    client.put_object(Body=content, Bucket=constants.S3_BUCKET, Key="{}{}/index.html".format(
-        path, slug), ContentType='text/html', ACL='public-read', Metadata={'author': author})
+        # replace the image attr as well if it matches 
+        if attrs['image'] == filename:
+            attrs['image'] = constants.CDN_DOMAIN + new_filename
 
-    if sitename == 'assorted':
+
+    post_meta = {'author': author, 'title': title, 'slug': slug, **attrs }
+
+    client.put_object(Body=content, Bucket=constants.S3_BUCKET, Key="{}{}/index.html".format(
+        path, slug), ContentType='text/html', ACL='public-read', Metadata=post_meta)
+
+    # update the site's metadata 
+    [posts_info, posts_meta] = get_prev_posts_info(slugged_sitename)
+    if 'prev' in posts_info:
+        posts_info['prev'] = posts_info['prev'].append(post_meta)
+    else:
+        posts_info['prev'] = [post_meta]
+    
+    client.put_object(Body=json.dumps(posts_info), Bucket=constants.S3_BUCKET, Key=constants.SITES_DIR + slugged_sitename + '/info.json', ContentType='text/json', Metadata=posts_meta)
+
+
+    if slugged_sitename == 'assorted':
         return constants.DEPLOY_DOMAIN + slug
     else: 
-        return constants.DEPLOY_DOMAIN.replace("https://", "https://{}.".format(sitename)) + slug
+        return constants.DEPLOY_DOMAIN.replace("https://", "https://{}.".format(slugged_sitename)) + slug
+
+
+def create_index(slugged_sitename, author, content):
+    path = constants.SITES_DIR + slugged_sitename
+    client.put_object(Body=content, Bucket=constants.S3_BUCKET, Key="{}/index.html".format(
+        path), ContentType='text/html', ACL='public-read', Metadata={'author': author})

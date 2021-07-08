@@ -34,8 +34,9 @@ def form_and_create_post(email_message, message_data, user, subject, reply_user,
         message = decoder.bytes_to_message(message_data)
         content, files = decoder.decode_message(message)
         [index_template, page_template] = interfacer.get_site_templates(sitename)
-        new_html = assembler.assemble_content(
-            attrs, content, files, index_template, page_template)
+        prev_content = interfacer.get_prev_posts_info(sitename)[0]['prev']
+        [new_page_html, post_attrs] = assembler.assemble_content(
+            attrs, content, files, page_template)
     except Exception as e:
         print(e)
         # something went wrong parsing.
@@ -45,11 +46,15 @@ def form_and_create_post(email_message, message_data, user, subject, reply_user,
         return
 
     try:
-        post_url = interfacer.create_post(sitename, user, subject, new_html, files)
+        post_url = interfacer.create_post(sitename, user, subject, new_page_html, post_attrs, files)
+        # make the index after we've uploaded the post since it relies on the uploaded post 
+        new_index_html = assembler.assemble_index(prev_content, index_template)
+        interfacer.create_index(sitename, user, new_index_html)
         sender.send_message(assembler.assemble_email(email_message,
                                                         messages.posted, {'url': post_url}), reply_user)
         print("{} posted: {}".format(uid, post_url))
-    except:
+    except Exception as e:
+        print(e)
         # something went wrong posting
         sender.send_message(assembler.assemble_email(
             email_message, messages.system_error), reply_user)
@@ -102,7 +107,7 @@ def fetch_and_decode_messages(new_messages):
                     sender.send_message(assembler.assemble_email(email_message, messages.permission_error, {'sitename': subject}), reply_user)
                     print("{} settings permission denied".format(uid))
             except Exception as e:
-                # print(e)
+                print(e)
                 sender.send_message(assembler.assemble_email(
                     email_message, messages.system_error), reply_user)
                 print("{} settings fail".format(uid))
