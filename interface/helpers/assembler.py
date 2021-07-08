@@ -1,6 +1,7 @@
 import tempfile
 import os
 import constants
+from email.utils import parsedate_tz, mktime_tz
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from html.parser import HTMLParser
@@ -71,8 +72,14 @@ def assemble_content(attrs, content, partfiles, page_template):
         **attrs
     })
 
+    # convert the email's formatted date to a UNIX timestamp 
+    time = str(mktime_tz(parsedate_tz(attrs['date'])))
+
     # new_markdown = html_to_markdown(new_html)
-    return [page_output, {'image': image, 'description': description}]
+
+    # return the html as well as the attrs that we'll save to the info.json file
+    # that's used when rendering the index page in the future
+    return [page_output, {'image': image, 'description': description, 'time': time, 'date': attrs['date']}]
 
 
 def assemble_index(previous_content, index_template):

@@ -1,6 +1,7 @@
 import ssl
 import certifi
 import threading
+import traceback
 import email
 import time
 import constants
@@ -34,11 +35,10 @@ def form_and_create_post(email_message, message_data, user, subject, reply_user,
         message = decoder.bytes_to_message(message_data)
         content, files = decoder.decode_message(message)
         [index_template, page_template] = interfacer.get_site_templates(sitename)
-        prev_content = interfacer.get_prev_posts_info(sitename)[0]['prev']
         [new_page_html, post_attrs] = assembler.assemble_content(
             attrs, content, files, page_template)
     except Exception as e:
-        print(e)
+        print(traceback.format_exc())
         # something went wrong parsing.
         sender.send_message(assembler.assemble_email(
             email_message, messages.format_error), reply_user)
@@ -48,13 +48,14 @@ def form_and_create_post(email_message, message_data, user, subject, reply_user,
     try:
         post_url = interfacer.create_post(sitename, user, subject, new_page_html, post_attrs, files)
         # make the index after we've uploaded the post since it relies on the uploaded post 
+        prev_content = interfacer.get_prev_posts_info(sitename)[0]['prev']
         new_index_html = assembler.assemble_index(prev_content, index_template)
         interfacer.create_index(sitename, user, new_index_html)
         sender.send_message(assembler.assemble_email(email_message,
                                                         messages.posted, {'url': post_url}), reply_user)
         print("{} posted: {}".format(uid, post_url))
     except Exception as e:
-        print(e)
+        print(traceback.format_exc())
         # something went wrong posting
         sender.send_message(assembler.assemble_email(
             email_message, messages.system_error), reply_user)
@@ -107,7 +108,7 @@ def fetch_and_decode_messages(new_messages):
                     sender.send_message(assembler.assemble_email(email_message, messages.permission_error, {'sitename': subject}), reply_user)
                     print("{} settings permission denied".format(uid))
             except Exception as e:
-                print(e)
+                print(traceback.format_exc())
                 sender.send_message(assembler.assemble_email(
                     email_message, messages.system_error), reply_user)
                 print("{} settings fail".format(uid))
@@ -158,7 +159,7 @@ while True:
 
             except KeyboardInterrupt as e:
                 raise e
-
+                
         server.idle_done()
         print("\nIDLE mode done")
 

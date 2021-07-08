@@ -17,20 +17,24 @@
       font-family: -apple-system, sans-serif; } body { box-sizing: border-box;
       margin: 0; } article { max-width: 650px; margin: 0 auto; padding: 20px; }
       h1 { margin-top: 60px; margin-bottom: 190px; } li { margin: 10px 0; }
-      code, pre { font-size: 14px; } a { color: #111; } .post { padding: 40px 0;
-      }
+      code, pre { font-size: 14px; } a { color: #111; } .post { padding: 20px 0;
+      margin-bottom: 40px; border-bottom: 1px solid black; } #posts {
+      margin-top: 160px; }
     </style>
   </head>
 
   <body>
     <article>
-      {{#posts}}
-        <a href="/{{slug}}">
-          <div class="post">
-            {{title}}
-          </div>
-        </a>
-      {{/posts}}
+      <div id="posts">
+        {{#posts}}
+          <a href="/{{slug}}">
+            <div class="post">
+              <h3>{{title}}</h3>
+              <p>{{description}}</p>
+            </div>
+          </a>
+        {{/posts}}
+      </div>
     </article>
   </body>
 

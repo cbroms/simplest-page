@@ -68,6 +68,7 @@ def get_site_metadata(sitename, user):
         else:
             return None
     else:
+        # if this is a new site, create new meta
         return {'subdomain': name_slugged, 'author': user, 'new': True}
     
 def get_prev_posts_info(slugged_sitename): 
@@ -82,7 +83,7 @@ def create_site(metadata):
     del metadata['new']
     # upload the info file with metadata to indicate that the site exists
     path = constants.SITES_DIR + metadata['subdomain'] + '/info.json'
-    client.put_object(Body=json.dumps({'prev': []}), Bucket=constants.S3_BUCKET, Key=path, ContentType='text/json', Metadata=metadata)
+    client.put_object(Body=json.dumps({'permitted': [metadata['author']], 'prev': []}), Bucket=constants.S3_BUCKET, Key=path, ContentType='text/json', Metadata=metadata)
 
 
 def create_session_url(metadata):
@@ -136,7 +137,8 @@ def create_post(slugged_sitename, author, title, content, attrs, files):
     # update the site's metadata 
     [posts_info, posts_meta] = get_prev_posts_info(slugged_sitename)
     if 'prev' in posts_info:
-        posts_info['prev'] = posts_info['prev'].append(post_meta)
+        # put most recent post at the top of the page by default 
+        posts_info['prev'].insert(0, post_meta)
     else:
         posts_info['prev'] = [post_meta]
     
